@@ -1,0 +1,592 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+    <meta charset="UTF-8">
+    <title>人员信息管理</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 2px;
+        }
+
+        .container {
+            max-width: 100%;
+            margin: 0 auto;
+        }
+
+        .input-group {
+            display: flex;
+            flex-wrap: wrap;
+            margin-bottom: 2px;
+        }
+
+        .input-group input {
+            flex: 1 1 30%;
+            margin-right: 2px;
+            padding: 3px;
+            min-width: 0;
+        }
+
+        .input-group button {
+            flex: 1 1 auto;
+            padding: 3px 5px;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            table-layout: fixed;
+            word-break: break-all;
+        }
+
+        th,
+        td {
+            border: 1px solid #ccc;
+            padding: 3px;
+            text-align: center;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+            font-size: 12px;
+        }
+
+        th[title],
+        td[title] {
+            cursor: pointer;
+        }
+
+        .action-buttons {
+            display: flex;
+            flex-wrap: nowrap;
+            justify-content: center;
+        }
+
+        .action-buttons button {
+            margin: 0 1px;
+            padding: 2px 4px;
+            flex: 1 1 auto;
+            font-size: 12px;
+        }
+
+        @media screen and (max-width: 400px) {
+
+            th:nth-child(4),
+            td:nth-child(4) {
+                display: none;
+            }
+        }
+
+        @media screen and (max-width: 300px) {
+
+            th:nth-child(3),
+            td:nth-child(3) {
+                display: none;
+            }
+        }
+
+        @media screen and (max-width: 250px) {
+
+            th:nth-child(2),
+            td:nth-child(2) {
+                display: none;
+            }
+
+            .input-group input {
+                flex: 1 1 100%;
+                margin-bottom: 2px;
+            }
+
+            .input-group input:not(:last-child) {
+                margin-right: 0;
+            }
+
+            .input-group button {
+                flex: 1 1 100%;
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container">
+        <h2>人员信息管理</h2>
+        <div class="input-group">
+            <input type="text" id="name" placeholder="姓名">
+            <input type="text" id="phone" placeholder="手机号">
+            <input type="text" id="idCard" placeholder="身份证号">
+            <button id="actionButton" onclick="addPerson()">添加</button>
+        </div>
+        <table id="personTable">
+            <thead>
+                <tr>
+                    <th>姓名</th>
+                    <th>手机号</th>
+                    <th>身份证号</th>
+                    <th>操作</th>
+                </tr>
+            </thead>
+            <tbody>
+                <!-- 人员信息将显示在这里 -->
+            </tbody>
+        </table>
+    </div>
+
+    <script>
+        let persons = [];
+        let editIndex = -1;
+
+        function addPerson() {
+            const nameInput = document.getElementById('name');
+            const phoneInput = document.getElementById('phone');
+            const idCardInput = document.getElementById('idCard');
+
+            const name = nameInput.value.trim();
+            const phone = phoneInput.value.trim();
+            const idCard = idCardInput.value.trim();
+
+            if (name === '' || phone === '' || idCard === '') {
+                alert('请填写完整信息！');
+                return;
+            }
+
+            const person = { name, phone, idCard };
+
+            if (editIndex === -1) {
+                persons.push(person);
+            } else {
+                persons[editIndex] = person;
+                editIndex = -1;
+            }
+
+            nameInput.value = '';
+            phoneInput.value = '';
+            idCardInput.value = '';
+
+            renderTable();
+        }
+
+        function renderTable() {
+            const tbody = document.querySelector('#personTable tbody');
+            tbody.innerHTML = '';
+
+            persons.forEach((person, index) => {
+                const tr = document.createElement('tr');
+
+                const nameTd = document.createElement('td');
+                nameTd.textContent = person.name;
+                nameTd.title = person.name;
+                nameTd.onclick = () => copyField(person.name);
+
+                const phoneTd = document.createElement('td');
+                phoneTd.textContent = person.phone;
+                phoneTd.title = person.phone;
+                phoneTd.onclick = () => copyField(person.phone);
+
+                const idCardTd = document.createElement('td');
+                idCardTd.textContent = person.idCard;
+                idCardTd.title = person.idCard;
+                idCardTd.onclick = () => copyField(person.idCard);
+
+                const actionTd = document.createElement('td');
+                actionTd.className = 'action-buttons';
+
+                const editBtn = document.createElement('button');
+                editBtn.textContent = '编辑';
+                editBtn.onclick = () => editPerson(index);
+
+                const deleteBtn = document.createElement('button');
+                deleteBtn.textContent = '删除';
+                deleteBtn.onclick = () => deletePerson(index);
+
+                actionTd.appendChild(editBtn);
+                actionTd.appendChild(deleteBtn);
+
+                tr.appendChild(nameTd);
+                tr.appendChild(phoneTd);
+                tr.appendChild(idCardTd);
+                tr.appendChild(actionTd);
+
+                tbody.appendChild(tr);
+            });
+        }
+
+        function copyField(value) {
+            if (navigator.clipboard && window.isSecureContext) {
+                // 使用异步Clipboard API
+                navigator.clipboard.writeText(value).then(() => {
+                    // 复制成功，无需弹出提示
+                }, (err) => {
+                    console.error('复制失败:', err);
+                });
+            } else {
+                // 使用document.execCommand('copy')方法
+                const tempInput = document.createElement('input');
+                tempInput.style.position = 'absolute';
+                tempInput.style.left = '-9999px';
+                tempInput.value = value;
+                document.body.appendChild(tempInput);
+                tempInput.select();
+                try {
+                    document.execCommand('copy');
+                } catch (err) {
+                    console.error('复制失败:', err);
+                }
+                document.body.removeChild(tempInput);
+            }
+        }
+
+        function editPerson(index) {
+            const person = persons[index];
+            document.getElementById('name').value = person.name;
+            document.getElementById('phone').value = person.phone;
+            document.getElementById('idCard').value = person.idCard;
+            editIndex = index;
+            updateActionButtonText();
+        }
+
+        function deletePerson(index) {
+            if (confirm('确定删除该人员信息吗？')) {
+                persons.splice(index, 1);
+                renderTable();
+            }
+        }
+        // 定义当前复制位置的状态
+        let currentCopyIndex = -1;
+        let currentRowIndex = 0;
+        const FIELDS = ['name', 'phone', 'idCard'];
+
+        // 添加键盘事件监听器
+        document.addEventListener('keydown', function (event) {
+            // 检查是否按下Ctrl+X
+            if (event.ctrlKey && event.key.toLowerCase() === 'x') {
+                event.preventDefault(); // 阻止默认行为
+                copyNextField();
+            }
+        });
+
+        // 复制下一个字段的函数
+        function copyNextField() {
+            if (persons.length === 0) {
+                return; // 如果没有数据，直接返回
+            }
+
+            // 更新复制位置
+            currentCopyIndex = (currentCopyIndex + 1) % FIELDS.length;
+
+            // 如果复制完一行的所有字段，移动到下一行
+            if (currentCopyIndex === 0) {
+                currentRowIndex = (currentRowIndex + 1) % persons.length;
+            }
+
+            // 获取要复制的值
+            const fieldName = FIELDS[currentCopyIndex];
+            const value = persons[currentRowIndex][fieldName];
+
+            // 复制字段值
+            copyField(value);
+
+            // 高亮显示当前复制的单元格
+            highlightCell(currentRowIndex, currentCopyIndex);
+        }
+
+        // 高亮显示当前复制的单元格
+        function highlightCell(rowIndex, cellIndex) {
+            // 移除所有现有的高亮
+            const allCells = document.querySelectorAll('#personTable td');
+            allCells.forEach(cell => cell.style.backgroundColor = '');
+
+            // 高亮当前单元格
+            const tbody = document.querySelector('#personTable tbody');
+            const row = tbody.children[rowIndex];
+            if (row) {
+                const cell = row.children[cellIndex];
+                if (cell) {
+                    cell.style.backgroundColor = '#e6f3ff';
+                    // 1秒后移除高亮
+                    setTimeout(() => {
+                        cell.style.backgroundColor = '';
+                    }, 1000);
+                }
+            }
+        }
+
+        // 修改原有的copyField函数，添加提示功能
+        function copyField(value) {
+            if (navigator.clipboard && window.isSecureContext) {
+                navigator.clipboard.writeText(value).then(() => {
+                    showCopyTooltip();
+                }, (err) => {
+                    console.error('复制失败:', err);
+                });
+            } else {
+                const tempInput = document.createElement('input');
+                tempInput.style.position = 'absolute';
+                tempInput.style.left = '-9999px';
+                tempInput.value = value;
+                document.body.appendChild(tempInput);
+                tempInput.select();
+                try {
+                    document.execCommand('copy');
+                    showCopyTooltip();
+                } catch (err) {
+                    console.error('复制失败:', err);
+                }
+                document.body.removeChild(tempInput);
+            }
+        }
+
+        // 添加复制提示功能
+        function showCopyTooltip() {
+            const tooltip = document.createElement('div');
+            tooltip.style.position = 'fixed';
+            tooltip.style.top = '10px';
+            tooltip.style.right = '10px';
+            tooltip.style.padding = '5px 10px';
+            tooltip.style.backgroundColor = 'rgba(0,0,0,0.7)';
+            tooltip.style.color = 'white';
+            tooltip.style.borderRadius = '3px';
+            tooltip.style.fontSize = '12px';
+            tooltip.textContent = '已复制';
+
+            document.body.appendChild(tooltip);
+
+            setTimeout(() => {
+                document.body.removeChild(tooltip);
+            }, 1000);
+        }
+        // 本地存储相关的常量
+        const STORAGE_KEY = 'personManagementData';
+        const STORAGE_VERSION = '1.0';
+
+        // 数据结构
+        const storageStructure = {
+            version: STORAGE_VERSION,
+            lastUpdated: null,
+            persons: []
+        };
+
+        // 初始化数据
+        function initializeData() {
+            try {
+                const storedData = localStorage.getItem(STORAGE_KEY);
+                if (storedData) {
+                    const parsedData = JSON.parse(storedData);
+                    // 版本检查
+                    if (parsedData.version === STORAGE_VERSION) {
+                        persons = parsedData.persons || [];
+                        renderTable();
+                        showToast('数据已从本地恢复');
+                    } else {
+                        // 版本不匹配，重新初始化
+                        saveToLocalStorage();
+                    }
+                }
+            } catch (error) {
+                console.error('初始化数据失败:', error);
+                showToast('数据恢复失败');
+            }
+        }
+
+        // 保存数据到localStorage
+        function saveToLocalStorage() {
+            try {
+                const dataToSave = {
+                    version: STORAGE_VERSION,
+                    lastUpdated: new Date().toISOString(),
+                    persons: persons
+                };
+                localStorage.setItem(STORAGE_KEY, JSON.stringify(dataToSave));
+            } catch (error) {
+                console.error('保存数据失败:', error);
+                showToast('数据保存失败');
+            }
+        }
+
+        // 修改addPerson函数
+        function addPerson() {
+            const nameInput = document.getElementById('name');
+            const phoneInput = document.getElementById('phone');
+            const idCardInput = document.getElementById('idCard');
+
+            const name = nameInput.value.trim();
+            const phone = phoneInput.value.trim();
+            const idCard = idCardInput.value.trim();
+
+            if (name === '' || phone === '' || idCard === '') {
+                showToast('请填写完整信息！');
+                return;
+            }
+
+            const person = { name, phone, idCard };
+
+            if (editIndex === -1) {
+                persons.push(person);
+            } else {
+                persons[editIndex] = person;
+                editIndex = -1;
+            }
+
+            nameInput.value = '';
+            phoneInput.value = '';
+            idCardInput.value = '';
+
+            renderTable();
+            saveToLocalStorage(); // 保存更改
+            showToast('保存成功');
+            updateActionButtonText();
+        }
+
+        // 修改deletePerson函数
+        function deletePerson(index) {
+            if (confirm('确定删除该人员信息吗？')) {
+                persons.splice(index, 1);
+                renderTable();
+                saveToLocalStorage(); // 保存更改
+                showToast('删除成功');
+            }
+        }
+
+        // 添加数据清理功能
+        function clearAllData() {
+            if (confirm('确定要清除所有数据吗？此操作不可恢复！')) {
+                persons = [];
+                localStorage.removeItem(STORAGE_KEY);
+                renderTable();
+                showToast('所有数据已清除');
+            }
+        }
+
+        // 添加数据导出功能
+        function exportData() {
+            try {
+                const dataStr = JSON.stringify(persons, null, 2);
+                const blob = new Blob([dataStr], { type: 'application/json' });
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = `person_data_${new Date().toISOString().slice(0, 10)}.json`;
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+                URL.revokeObjectURL(url);
+                showToast('数据导出成功');
+            } catch (error) {
+                console.error('导出失败:', error);
+                showToast('数据导出失败');
+            }
+        }
+
+        // 添加数据导入功能
+        function importData() {
+            const input = document.createElement('input');
+            input.type = 'file';
+            input.accept = '.json';
+            input.onchange = function (e) {
+                const file = e.target.files[0];
+                if (file) {
+                    const reader = new FileReader();
+                    reader.onload = function (e) {
+                        try {
+                            const importedData = JSON.parse(e.target.result);
+                            if (Array.isArray(importedData)) {
+                                persons = importedData;
+                                saveToLocalStorage();
+                                renderTable();
+                                showToast('数据导入成功');
+                            } else {
+                                showToast('无效的数据格式');
+                            }
+                        } catch (error) {
+                            console.error('导入失败:', error);
+                            showToast('数据导入失败');
+                        }
+                    };
+                    reader.readAsText(file);
+                }
+            };
+            input.click();
+        }
+
+        // 通用提示函数
+        function showToast(message) {
+            const toast = document.createElement('div');
+            toast.className = 'toast-message';
+            toast.textContent = message;
+            document.body.appendChild(toast);
+
+            // 添加动画效果
+            requestAnimationFrame(() => {
+                toast.style.opacity = '1';
+                setTimeout(() => {
+                    toast.style.opacity = '0';
+                    setTimeout(() => {
+                        document.body.removeChild(toast);
+                    }, 300);
+                }, 2000);
+            });
+        }
+
+        // 添加CSS样式
+        const style = document.createElement('style');
+        style.textContent = `
+    .toast-message {
+        position: fixed;
+        top: 10px;
+        right: 10px;
+        background-color: rgba(0, 0, 0, 0.7);
+        color: white;
+        padding: 8px 12px;
+        border-radius: 4px;
+        font-size: 12px;
+        z-index: 1000;
+        opacity: 0;
+        transition: opacity 0.3s ease;
+    }
+    
+    .data-management-buttons {
+        margin-top: 5px;
+        display: flex;
+        gap: 5px;
+    }
+    
+    .data-management-buttons button {
+        font-size: 11px;
+        padding: 2px 4px;
+    }
+`;
+        document.head.appendChild(style);
+
+        // 添加数据管理按钮到HTML
+        function addDataManagementButtons() {
+            const container = document.querySelector('.container');
+            const buttonGroup = document.createElement('div');
+            buttonGroup.className = 'data-management-buttons';
+
+            buttonGroup.innerHTML = `
+        <button onclick="exportData()">导出数据</button>
+        <button onclick="importData()">导入数据</button>
+        <button onclick="clearAllData()" style="color: red;">清除数据</button>
+    `;
+
+            container.appendChild(buttonGroup);
+        }
+
+        // 页面加载时初始化
+        document.addEventListener('DOMContentLoaded', () => {
+            initializeData();
+            addDataManagementButtons();
+            updateActionButtonText();
+        });
+
+        function updateActionButtonText() {
+            if (editIndex !== -1) {
+                document.getElementById('actionButton').innerText = '保存';
+            } else {
+                document.getElementById('actionButton').innerText = '添加';
+            }
+        }
+    </script>
+</body>
+
+</html>
